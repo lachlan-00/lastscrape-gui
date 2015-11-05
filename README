@@ -1,3 +1,9 @@
+I use lastexport a lot so i've forked this to update things to python3.
+
+I'll look at updating the whole project when i have time.
+
+CHANGES:
+added python3 edit of lastexport.py (lastexport3.py)
 
 == MAINTAINER WANTED ==
 
