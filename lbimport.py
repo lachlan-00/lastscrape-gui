@@ -14,11 +14,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-'''
+"""
 Import your loved and banned tracks to a gnu fm server.
 Usage: lbimport.py --user=Username --type=loved --file=mylovedtracks.txt [--server=SERVER]
 
-'''
+"""
 
 import json, sys, os, urllib, urllib2, hashlib, getpass, time
 from optparse import OptionParser

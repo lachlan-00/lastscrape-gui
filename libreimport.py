@@ -45,7 +45,7 @@ if __name__ == '__main__':
 
     n = 0
     for line in file(data):
-        n = n + 1
+        n += 1
         timestamp, track, artist, album, trackmbid, artistmbid, albummbid = line.strip("\n").split("\t")
         #submission protocol doesnt specify artist/album mbid, so we dont send them
         scrobbler.add_track(ScrobbleTrack(timestamp, track, artist, album, trackmbid))

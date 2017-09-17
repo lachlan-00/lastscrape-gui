@@ -42,14 +42,18 @@ def get_options(parser):
     """ Define command line options."""
     parser.add_option("-u", "--user", dest="username", default=None,
                       help="User name.")
-    parser.add_option("-o", "--outfile", dest="outfile", default="exported_tracks.txt",
+    parser.add_option("-o", "--outfile", dest="outfile",
+                      default="exported_tracks.txt",
                       help="Output file, default is exported_tracks.txt")
-    parser.add_option("-p", "--page", dest="startpage", type="int", default="1",
+    parser.add_option("-p", "--page", dest="startpage",
+                      type="int", default="1",
                       help="Page to start fetching tracks from, default is 1")
     parser.add_option("-s", "--server", dest="server", default="last.fm",
-                      help="Server to fetch track info from, default is last.fm")
+                      help="Server to fetch track info from, " +
+                      "default is last.fm")
     parser.add_option("-t", "--type", dest="infotype", default="scrobbles",
-                      help="Type of information to export, scrobbles|loved|banned, default is scrobbles")
+                      help="Type of information to export, " +
+                      "scrobbles|loved|banned, default is scrobbles")
     options, args = parser.parse_args()
 
     if not options.username:
@@ -61,10 +65,12 @@ def get_options(parser):
         infotype = "bannedtracks"
     else:
         infotype = "recenttracks"
-         
-    return options.username, options.outfile, options.startpage, options.server, infotype
 
-def connect_server(server, username, startpage, sleep_func=time.sleep, tracktype='recenttracks'):
+    return (options.username, options.outfile, options.startpage,
+            options.server, infotype)
+
+def connect_server(server, username, startpage, sleep_func=time.sleep,
+                   tracktype='recenttracks'):
     """ Connect to server and get a XML page."""
     if server == "libre.fm":
         baseurl = 'http://alpha.libre.fm/2.0/?'
@@ -77,10 +83,10 @@ def connect_server(server, username, startpage, sleep_func=time.sleep, tracktype
     elif server == "last.fm":
         baseurl = 'http://ws.audioscrobbler.com/2.0/?'
         urlvars = dict(method='user.get%s' % tracktype,
-                    api_key='e38cc7822bd7476fe4083e36ee69748e',
-                    user=username,
-                    page=startpage,
-                    limit=50)
+                       api_key='e38cc7822bd7476fe4083e36ee69748e',
+                       user=username,
+                       page=startpage,
+                       limit=50)
     else:
         if server[:7] != 'http://':
             server = 'http://%s' % server
@@ -145,7 +151,8 @@ def parse_track(trackelement):
     trackmbid = trackelement.find('mbid').text
     date = trackelement.find('date').get('uts')
 
-    output = [date, trackname, artistname, albumname, trackmbid, artistmbid, albummbid]
+    output = [date, trackname, artistname, albumname, trackmbid, artistmbid,
+              albummbid]
 
     for i, v in enumerate(output):
         if v is None:
@@ -158,7 +165,8 @@ def write_tracks(tracks, outfileobj):
     for fields in tracks:
         outfileobj.write("\t".join(fields) + "\n")
 
-def get_tracks(server, username, startpage=1, sleep_func=time.sleep, tracktype='recenttracks'):
+def get_tracks(server, username, startpage=1, sleep_func=time.sleep,
+               tracktype='recenttracks'):
     page = startpage
     response = connect_server(server, username, page, sleep_func, tracktype)
     totalpages = get_pageinfo(response, tracktype)
@@ -170,10 +178,11 @@ def get_tracks(server, username, startpage=1, sleep_func=time.sleep, tracktype='
         #Skip connect if on first page, already have that one stored.
 
         if page > startpage:
-            response =  connect_server(server, username, page, sleep_func, tracktype)
+            response = connect_server(server, username, page, sleep_func,
+                                      tracktype)
 
         tracklist = get_tracklist(response)
-		
+
         tracks = []
         for trackelement in tracklist:
             # do not export the currently playing track.
@@ -191,13 +200,15 @@ def main(server, username, startpage, outfile, infotype='recenttracks'):
     totalpages = -1  # ditto
     n = 0
     try:
-        for page, totalpages, tracks in get_tracks(server, username, startpage, tracktype=infotype):
+        for page, totalpages, tracks in get_tracks(server, username, startpage,
+                                                   tracktype=infotype):
             print("Got page %s of %s.." % (page, totalpages))
             for track in tracks:
                 if infotype == 'recenttracks':
                     trackdict.setdefault(track[0], track)
                 else:
-                    #Can not use timestamp as key for loved/banned tracks as it's not unique
+                    #Can not use timestamp as key for loved/banned
+                    #tracks as it's not unique
                     n += 1
                     trackdict.setdefault(n, track)
     except ValueError as e:
@@ -208,7 +219,8 @@ def main(server, username, startpage, outfile, infotype='recenttracks'):
         with open(outfile, 'a') as outfileobj:
             tracks = sorted(trackdict.values(), reverse=True)
             write_tracks(tracks, outfileobj)
-            print("Wrote page %s-%s of %s to file %s" % (startpage, page, totalpages, outfile))
+            print("Wrote page %s-%s of %s to file %s" % (startpage, page,
+                                                         totalpages, outfile))
 
 if __name__ == "__main__":
     parser = OptionParser()

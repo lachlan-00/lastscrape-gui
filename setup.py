@@ -27,5 +27,5 @@ setup(
         },
     ),
     package_dir={'lastscrape': ''},
-    data_files=[ ("",["lastscrape.ui", "vcredist_x86.exe"])]
+    data_files=[ ("",["lastscrape.ui", "vcredist_x86.exe"])], requires=['PyQt4', 'PyQt4', 'py2exe']
 )
