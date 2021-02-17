@@ -1,18 +1,22 @@
-#modified version of old gobble.py
 try:
     import hashlib
     md5hash = hashlib.md5
 except ImportError:
     import md5
     md5hash = md5.new
+
 from optparse import OptionParser
 import time
-from urllib import urlencode
-from urllib2 import urlopen, URLError, HTTPError
+
+import socket
+import errno
+
+from urllib.parse import urlencode
+from urllib.request import urlopen
+from urllib.error import URLError, HTTPError
 
 
 class ScrobbleException(Exception):
-
     pass
 
 
@@ -20,7 +24,7 @@ class ScrobbleServer(object):
 
     def __init__(self, server_name, username, password, client_code='imp'):
         if server_name[:7] != "http://":
-            server_name = "http://%s" % (server_name,)
+            server_name = f"http://{server_name}"
         self.client_code = client_code
         self.name = server_name
         self.password = password
@@ -33,17 +37,16 @@ class ScrobbleServer(object):
 
     def _handshake(self):
         timestamp = int(time.time())
-        token = (md5hash(md5hash(self.password).hexdigest()
-                    + str(timestamp)).hexdigest())
-        auth_url = "%s/?hs=true&p=1.2&u=%s&t=%d&a=%s&c=%s" % (self.name,
-                                                              self.username,
-                                                              timestamp,
-                                                              token,
-                                                              self.client_code)
-        response = urlopen(auth_url).read()
+        token = (md5hash((md5hash(
+                self.password.encode('utf-8')).hexdigest()
+                + str(timestamp)).encode('utf-8'))
+                .hexdigest())
+
+        auth_url = f"{self.name}/?hs=true&p=1.2&u={self.username}&t={timestamp}&a={token}&c={self.client_code}"
+        response = urlopen(auth_url).read().decode('utf-8')
         lines = response.split("\n")
         if lines[0] != "OK":
-            raise ScrobbleException("Server returned: %s" % (response,))
+            raise ScrobbleException(f'Server returned: {response}')
         self.session_id = lines[1]
         self.submit_url = lines[3]
 
@@ -57,22 +60,30 @@ class ScrobbleServer(object):
             i += 1
         data += [('s', self.session_id)]
         last_error = None
-        for timeout in (1, 2, 4, 8, 16, 32):
+        for timeout in (10, 20, 40, 60, 90, 120):
             try:
                 response = urlopen(self.submit_url, urlencode(data)).read()
                 response = response.strip()
-            except (URLError, HTTPError), e:
+            except (URLError, HTTPError) as e:
                 last_error = str(e)
-                print 'Scrobbling error: %s, will retry in %ss' % (last_error, timeout)
+                print('Scrobbling error: {last_error}, will retry in {timeout}s')
+            except socket.error as error:
+                        if error.errno == errno.WSAECONNRESET:
+                              last_error = str(error)
+                              print('Scrobbling error: {last_error}, will retry in timeouts')
+
             else:
                 if response == 'OK':
                     break
                 else:
-                    last_error = 'Bad server response: %s' % response
-                    print '%s, will retry in %ss' % (last_error, timeout)
+                    try:
+                        last_error = f'Bad server response: {response}'
+                    except:
+                        last_error = 'Unknown server response.'
+                    print(f'{last_error}, will retry in {timeout}s')
             sleep_func(timeout)
         else:
-            raise ScrobbleException('Cannot scrobble after multiple retries. Last error: %s' % last_error)
+            raise ScrobbleException(f'Cannot scrobble after multiple retries. Last error: {last_error}')
 
         self.post_data = []
         sleep_func(1)
@@ -100,16 +111,16 @@ class ScrobbleTrack(object):
     def get_tuples(self, i):
         #timestamp = str(int(time.mktime(self.timestamp.utctimetuple())))
         data = []
-        data += [('i[%d]' % i, self.timestamp), ('t[%d]' % i, self.trackname),
-                 ('a[%d]' % i, self.artistname)]
+        data += [(f'i[{i}]', self.timestamp), (f't[{i}]', self.trackname),
+                 (f'a[{i}]', self.artistname)]
         if self.albumname is not None:
-            data.append(('b[%d]' % i, self.albumname))
+            data.append((f'b[{i}]', self.albumname))
         if self.trackmbid is not None:
-            data.append(('m[%d]' % i, self.trackmbid))
+            data.append((f'm[{i}]', self.trackmbid))
         if self.tracklength is not None:
-            data.append(('l[%d]' % i, self.tracklength))
+            data.append((f'l[{i}]', self.tracklength))
         if self.tracknumber is not None:
-            data.append(('n[%d]' % i, self.tracknumber))
+            data.append((f'n[{i}]', self.tracknumber))
         return data
 
 
