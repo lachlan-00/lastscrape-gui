@@ -126,12 +126,12 @@ def get_pageinfo(response, tracktype='recenttracks'):
 def get_tracklist(response):
     """Read XML page and get a list of tracks and their info."""
     xmlpage = ET.fromstring(response)
-    tracklist = xmlpage.getiterator('track')
+    tracklist = xmlpage.iter('track')
     return tracklist
 
 def parse_track(trackelement):
     """Extract info from every track entry and output to list."""
-    if trackelement.find('artist').getchildren():
+    if list(trackelement.find('artist')):
         #artist info is nested in loved/banned tracks xml
         artistname = trackelement.find('artist').find('name').text
         artistmbid = trackelement.find('artist').find('mbid').text
